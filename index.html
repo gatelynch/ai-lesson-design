@@ -124,6 +124,18 @@
     .score-card h3{font-size:clamp(21px,1.85vw,28px);line-height:1.18;margin:0 0 6px;color:var(--terra2)}
     .score-card p{font-size:clamp(16px,1.35vw,20px);line-height:1.4;margin:0;color:var(--soft)}
 
+    /* AI 能力公式 */
+    .ai-capability{max-width:1160px}
+    .formula{font-family:var(--font-hand);font-size:clamp(30px,3.25vw,46px);line-height:1.22;font-weight:700;color:var(--ink);margin:2px 0 22px}
+    .formula .x{color:var(--terra2);padding:0 .2em}
+    .cap-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .cap-card{background:var(--paper);border:1px solid var(--line);border-top:6px solid var(--sage);border-radius:8px;padding:22px 26px;box-shadow:var(--shadow-sm)}
+    .cap-card.engine{border-top-color:var(--sky)}
+    .cap-card h3{font-size:clamp(26px,2.4vw,36px);margin:0 0 12px;color:var(--terra2)}
+    .cap-card ul{margin:.1em 0 0;padding-left:1.15em}
+    .cap-card li{font-size:clamp(18px,1.55vw,23px);line-height:1.42;margin:.22em 0;color:var(--soft)}
+    .cap-bottom{margin-top:20px;background:linear-gradient(90deg,rgba(49,95,105,.10),rgba(213,111,74,.08));border:1px solid rgba(49,95,105,.24);border-radius:8px;padding:16px 20px;color:var(--ink);font-size:clamp(19px,1.7vw,25px);line-height:1.4}
+
     /* 表格 */
     table{border-collapse:collapse;width:100%;margin-top:14px;font-size:clamp(18px,1.7vw,25px);background:var(--paper);border-radius:8px;overflow:hidden;box-shadow:var(--shadow-sm)}
     th,td{border:1px solid var(--line);padding:12px 16px;text-align:left}
@@ -154,6 +166,7 @@
       .slide{padding:32px}.cards{flex-direction:column}.progress{display:none}
       .activity-grid{grid-template-columns:1fr}
       .case-split{grid-template-columns:1fr}.case-photo{max-height:320px}
+      .cap-grid{grid-template-columns:1fr}
       .bd-steps{grid-template-columns:1fr}.bd-card:nth-child(n){margin-top:0;min-height:auto}.bd-ai{align-items:flex-start;flex-direction:column}
       .bottombar{position:sticky;bottom:12px}
     }
@@ -644,6 +657,35 @@
         <div class="slide-head"><div class="kicker"> 反思</div><h2>從人工智慧，到「人選智慧」</h2></div>
         <div class="big" style="font-size:clamp(30px,3.6vw,50px)">AI 給你很多選項。<br>真正的能力，是 <span class="accent">「選」</span>——</div>
         <p class="sub">你的<strong>判斷</strong>、你的<strong>品味</strong>、你的<strong>後設認知</strong>。</p>
+      </section>
+
+      <!-- S33 AI 能力 -->
+      <section class="slide" data-note="這是我這段時間反覆觀察自己與身邊朋友使用 AI 後，慢慢浮現出來的想法。AI 能力不是單點能力，而是一個系統：對 AI 的認知能力，乘上建構 AI 工作流的工程能力。如果一個人對 AI 的認知很弱，他可能只會把 AI 當成更快的搜尋引擎、更會整理檔案的助理，最後只是省一點時間。但如果一個人沒有建構工作流的工程能力，即使他很懂 AI 的潛力，也很難把想法穩定落地。認知能力包含：把 AI 從工具升級成思考夥伴；有能動性，遇到不會先試試看；有專業品味，知道 AI 哪裡錯、哪裡不到位；有 AI 敏銳度，定期校準自己對 AI 能力的理解。工程能力包含：以終為始，先定義目標、限制、標準、脈絡；重構任務，把工作拆成資料、脈絡、架構、草稿、驗收等節點，重新設計人與 AI 各自最適合的位置。只要其中一邊太低，整體能力就會被限制住。">
+        <div class="slide-head"><div class="kicker">反思</div><h2>什麼是 AI 能力？</h2></div>
+        <div class="ai-capability">
+          <div class="formula">AI 能力 ＝<br>對 AI 的認知能力 <span class="x">×</span> 建構 AI 工作流的工程能力</div>
+          <div class="cap-grid">
+            <div class="cap-card">
+              <h3>對 AI 的認知能力</h3>
+              <ul>
+                <li>把 AI 從工具升級成<strong>思考夥伴</strong></li>
+                <li>有能動性：不會，所以先試</li>
+                <li>有專業品味：知道哪裡不對</li>
+                <li>有 AI 敏銳度：持續校準想像</li>
+              </ul>
+            </div>
+            <div class="cap-card engine">
+              <h3>建構工作流的工程能力</h3>
+              <ul>
+                <li><strong>以終為始</strong>：先定義目標、限制與標準</li>
+                <li><strong>重構任務</strong>：拆出可交給 AI 放大的節點</li>
+                <li>建立可重複、可修正、可驗證的流程</li>
+                <li>重新設計人與 AI 各自的位置</li>
+              </ul>
+            </div>
+          </div>
+          <div class="cap-bottom">這不是加法，是乘法：<strong>任一邊太低，整體能力就會被限制住。</strong></div>
+        </div>
       </section>
 
       <!-- S34 結語 -->
