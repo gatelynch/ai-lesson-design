@@ -168,6 +168,7 @@
       .case-split{grid-template-columns:1fr}.case-photo{max-height:320px}
       .cap-grid{grid-template-columns:1fr}
       .bd-steps{grid-template-columns:1fr}.bd-card:nth-child(n){margin-top:0;min-height:auto}.bd-ai{align-items:flex-start;flex-direction:column}
+      .notes{position:fixed;left:12px;right:12px;bottom:76px;width:auto;max-height:38vh;border-radius:12px;padding:16px;font-size:15px;line-height:1.5}
       .bottombar{position:sticky;bottom:12px}
     }
   </style>
@@ -443,7 +444,7 @@
 
       <!-- S16 一波三折 -->
       <section class="slide" data-note="我在現場真的跑過的單元。重點不是『AI 幫孩子寫故事』，而是先確定要評什麼（寫作、合作、提問），才設計『先想再協作』的活動——AI 是協作對象，不是代筆。改變：作文成績→三種能力；獨自完成→兩人協作；交差→願意一改再改。｜👥 學員：這單元裡，AI 取代了什麼？又逼孩子多做了什麼？">
-        <div class="slide-head"><div class="kicker">真實案例</div><h2>一波三折的故事</h2></div>
+        <div class="slide-head"><div class="kicker">真實案例</div><h2>加入AI的作文課</h2></div>
         <div class="cards">
           <div class="card"><h4>目標</h4><p>從原本的自己寫到孩子能和<strong>AI 協作</strong> </p></div>
           <div class="card"><h4>評量</h4><p>從原本的寫作成績到<strong>寫作 × 合作 × 提問。</strong></p></div>
@@ -514,11 +515,11 @@
 
       <!-- S22 AI 作文教學 -->
       <section class="slide" data-note="案例二改成 AI 作文教學。重點不是讓學生直接生成作文，而是從構思、卡關、追問、修改開始。學生學的是如何適切委託任務，而不是全盤依賴。後來 AI 作文比賽報名多到要用三間教室，但評分重點不是文章多漂亮，而是學生如何跟 AI 對話：低分是照單全收，中分能引導重寫，高分會帶著自己的核心想法挑 AI 的毛病。也可以補一句：語文課完成故事後，資訊課再用故事生成圖像，自然接到視覺呈現。">
-        <div class="slide-head"><div class="kicker">案例二</div><h2>AI 作文教學：評的不是文章，是對話</h2></div>
+        <div class="slide-head"><div class="kicker">案例二</div><h2>AI 作文比賽：評的不是文章，是對話</h2></div>
         <div class="case-split">
           <img class="case-photo" src="assets/ai-writing/ai-writing-class.jpg" alt="學生在教室中使用 AI 協作寫作">
           <div class="case-panel">
-            <p class="case-lead">語文課不是讓學生直接生成作品，而是從<strong>構思、釐清想法、突破卡關</strong>開始。學生問 AI 詞彙、情緒、轉折，協作完成故事，再延伸到資訊課的 AI 圖像生成。</p>
+            <p class="case-lead">不是讓學生直接生成作品，而是從<strong>構思、釐清想法、突破卡關</strong>開始。學生問 AI 詞彙、情緒、轉折，協作完成故事，再延伸到資訊課的 AI 圖像生成。</p>
             <div class="score-grid">
               <div class="score-card">
                 <h3>低分區：照單全收</h3>
@@ -715,11 +716,10 @@
       <div class="controls">
         <button id="prev">← 上一頁</button>
         <button id="next">下一頁 →</button>
-        <button id="noteBtn">講者備註 (N)</button>
       </div>
       <div class="progress"><span id="bar"></span></div>
       <div style="display:flex;align-items:center;gap:14px">
-        <span class="hint">← → 翻頁 · N 備註 · F 全螢幕</span>
+        <span class="hint">← → 翻頁 · F 全螢幕</span>
         <span class="counter" id="counter">1 / 1</span>
       </div>
     </nav>
@@ -741,7 +741,6 @@
     }
     document.getElementById('next').onclick=()=>show(i+1);
     document.getElementById('prev').onclick=()=>show(i-1);
-    document.getElementById('noteBtn').onclick=()=>notes.classList.toggle('show');
     document.addEventListener('keydown',e=>{
       if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(i+1);}
       else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1);}
@@ -751,6 +750,7 @@
       else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
     });
     show(0);
+    if(window.matchMedia('(max-width: 900px)').matches){notes.classList.add('show');}
   </script>
 </body>
 </html>
