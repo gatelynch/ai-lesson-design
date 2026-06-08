@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>生成式 AI 協作備課與教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://chinese-fonts-cdn.deno.dev/packages/lxgwwenkaitc/dist/LXGWWenKaiTC-Regular/result.css">
+  <style>
+    :root{
+      --cream:#f8f4ec; --paper:#fffdf8; --paper2:#f1e7d5; --ink:#342f2a;
+      --soft:#675d51; --terra:#d56f4a; --terra2:#b95738; --mustard:#dca24f;
+      --sage:#6f9272; --sky:#517f93; --teal:#315f69; --line:#ded0bc; --code:#2d2722;
+      --shadow:0 16px 34px rgba(82,67,45,.13); --shadow-sm:0 6px 16px rgba(82,67,45,.10);
+      --font-hand:"LXGW WenKai TC","Noto Sans TC","PingFang TC",sans-serif;
+      --font-body:"Noto Sans TC","PingFang TC",sans-serif;
+      --font-mono:"JetBrains Mono","Noto Sans TC",monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var(--ink);font-family:var(--font-body)}
+    body{background:linear-gradient(180deg,#fbf8f1 0%,#f3eee5 100%)}
+    .deck{height:100%;display:grid;grid-template-rows:1fr 54px;padding:22px;gap:14px}
+    .stage{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:rgba(255,253,248,.88);box-shadow:var(--shadow)}
+    .slide{display:none;position:absolute;inset:0;padding:54px 70px;overflow:auto}
+    .slide.active{display:flex;flex-direction:column;justify-content:center;animation:enter .22s ease-out}
+    @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    h1,h2,h3{font-family:var(--font-hand);font-weight:700;line-height:1.2;margin:0;color:var(--ink)}
+    h2{font-size:clamp(34px,4.2vw,60px)}
+    p,li{font-size:clamp(21px,2vw,29px);line-height:1.5}
+    p{margin:.2em 0 .5em}
+    strong{color:var(--terra2)} em{font-style:normal;color:var(--sage);font-weight:700}
+    code{font-family:var(--font-mono);background:var(--code);color:#f8e9c8;border-radius:8px;padding:.08em .36em;font-size:.88em}
+
+    .kicker{display:inline-block;font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;color:var(--terra2);
+      background:rgba(213,111,74,.08);border:1px solid rgba(213,111,74,.26);border-radius:8px;padding:7px 13px;margin-bottom:18px;text-transform:uppercase}
+    .slide-head{margin-bottom:22px;flex:0 0 auto}
+
+    .main-copy{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:30px 38px;box-shadow:var(--shadow-sm);max-width:1120px}
+    .main-copy ul,.main-copy ol{margin:.2em 0;padding-left:1.2em}
+    .main-copy li{margin:.32em 0}
+
+    /* hero / 封面 */
+    .hero{align-items:center;text-align:center}
+    .hero h1{font-size:clamp(48px,6.6vw,92px);line-height:1.1;color:var(--terra2);margin:.08em 0}
+    .hero .tagline{font-size:clamp(24px,2.6vw,38px);color:var(--soft);margin-top:.2em}
+    .hero .speaker{margin-top:1.4em;color:var(--soft);font-size:clamp(20px,1.9vw,28px)}
+    .hero .pillrow{margin-top:1.1em;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .pill{font-family:var(--font-mono);font-size:15px;letter-spacing:.04em;color:var(--terra2);background:var(--paper2);border:1px solid var(--line);border-radius:8px;padding:8px 18px}
+
+    /* 大字陳述 / 金句 */
+    .statement{align-items:flex-start}
+    .statement.center{align-items:center;text-align:center}
+    .big{font-family:var(--font-hand);font-weight:700;font-size:clamp(34px,4.6vw,64px);line-height:1.32;color:var(--ink);max-width:1180px}
+    .big .accent{color:var(--terra2)}
+    .sub{margin-top:.7em;color:var(--soft);font-size:clamp(22px,2.1vw,32px);line-height:1.5}
+
+    /* 深色金句頁 */
+    .dark{background:linear-gradient(140deg,#3d342b,#2e2620);align-items:center;text-align:center}
+    .dark .big{color:#fbf0dd}
+    .dark .big .accent{color:var(--mustard)}
+    .dark .sub{color:var(--mustard)}
+    .dark .kicker{color:var(--mustard);background:rgba(227,168,87,.12);border-color:rgba(227,168,87,.35)}
+
+    /* 卡片列 */
+    .cards{display:flex;gap:20px;flex-wrap:wrap;margin-top:10px}
+    .card{flex:1;min-width:240px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:24px 28px;box-shadow:var(--shadow-sm)}
+    .card.hi{border-color:var(--terra);border-top:5px solid var(--terra)}
+    .card .num{font-family:var(--font-hand);font-weight:700;font-size:2em;color:var(--mustard);line-height:1}
+    .card h4{font-family:var(--font-hand);font-size:clamp(24px,2.2vw,32px);color:var(--terra2);margin:.2em 0 .35em}
+    .card p{font-size:clamp(19px,1.7vw,25px);color:var(--soft);margin:.2em 0}
+
+    /* 流程 pills */
+    .flow{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px}
+    .flow .step{background:var(--paper2);border:1px solid var(--line);border-radius:8px;padding:18px 26px;font-family:var(--font-hand);font-weight:700;font-size:clamp(22px,2.1vw,30px)}
+    .flow .arr{color:var(--terra);font-size:1.6em}
+
+    /* Backward Design */
+    .bd-layout{display:grid;grid-template-columns:1fr;gap:20px;max-width:1160px}
+    .bd-question{font-size:clamp(22px,2vw,30px);line-height:1.42;color:var(--soft);margin:0 0 2px}
+    .bd-question strong{color:var(--teal)}
+    .bd-steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;align-items:stretch}
+    .bd-card{position:relative;background:var(--paper);border:1px solid var(--line);border-top:6px solid var(--sage);border-radius:8px;padding:22px 24px 24px;box-shadow:var(--shadow-sm);min-height:206px}
+    .bd-card:nth-child(2){margin-top:32px;border-top-color:var(--sky)}
+    .bd-card:nth-child(3){margin-top:64px;border-top-color:var(--terra)}
+    .bd-num{font-family:var(--font-mono);font-size:14px;letter-spacing:.1em;color:var(--soft);text-transform:uppercase;margin-bottom:8px}
+    .bd-title{font-family:var(--font-hand);font-weight:700;font-size:clamp(28px,2.7vw,40px);line-height:1.15;color:var(--ink);margin:0 0 12px}
+    .bd-desc{font-size:clamp(18px,1.55vw,23px);line-height:1.45;color:var(--soft);margin:0}
+    .bd-ai{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,rgba(49,95,105,.10),rgba(213,111,74,.08));border:1px solid rgba(49,95,105,.24);border-radius:8px;padding:18px 22px;color:var(--ink)}
+    .bd-ai .tag{flex:0 0 auto;font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;font-weight:700}
+    .bd-ai p{font-size:clamp(19px,1.7vw,25px);line-height:1.45;margin:0}
+
+    /* prompt 引言塊 */
+    .prompt{border:1px solid var(--line);border-left:8px solid var(--terra);background:var(--paper2);border-radius:10px;padding:20px 26px;box-shadow:var(--shadow-sm);margin-top:14px;font-size:clamp(20px,1.85vw,27px);line-height:1.5}
+    .prompt .lbl{font-family:var(--font-mono);font-size:13px;letter-spacing:.14em;color:var(--terra2);text-transform:uppercase;margin-bottom:8px}
+
+    /* 實作活動 */
+    .activity-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+    .activity-box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:22px 24px;box-shadow:var(--shadow-sm)}
+    .activity-box h3{font-size:clamp(26px,2.4vw,36px);margin-bottom:10px;color:var(--terra2)}
+    .activity-box p,.activity-box li{font-size:clamp(18px,1.55vw,23px);line-height:1.48;color:var(--soft)}
+    .activity-box ul,.activity-box ol{margin:.2em 0 0;padding-left:1.15em}
+    .activity-box li{margin:.25em 0}
+    .activity-box.task{border-top:6px solid var(--sky)}
+    .activity-box.example{border-top:6px solid var(--sage)}
+    .mini-prompt{margin-top:18px;background:linear-gradient(90deg,rgba(49,95,105,.09),rgba(213,111,74,.08));border:1px solid rgba(49,95,105,.22);border-left:8px solid var(--teal);border-radius:8px;padding:18px 22px;font-size:clamp(18px,1.55vw,23px);line-height:1.45;color:var(--ink)}
+    .mini-prompt .lbl{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;margin-bottom:7px}
+    .sample-prompt{background:linear-gradient(90deg,rgba(49,95,105,.10),rgba(213,111,74,.08));border:1px solid rgba(49,95,105,.24);border-left:10px solid var(--teal);border-radius:8px;padding:28px 34px;box-shadow:var(--shadow-sm);max-width:1120px;font-size:clamp(22px,1.9vw,30px);line-height:1.52;color:var(--ink)}
+    .sample-prompt .lbl{font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;color:var(--teal);text-transform:uppercase;margin-bottom:12px}
+    .sample-note{margin-top:18px;color:var(--soft);font-size:clamp(20px,1.7vw,26px)}
+    .time-chip{display:inline-block;font-family:var(--font-mono);font-size:14px;letter-spacing:.06em;color:var(--teal);background:rgba(49,95,105,.08);border:1px solid rgba(49,95,105,.24);border-radius:8px;padding:6px 10px;margin-bottom:10px}
+
+    /* 案例照片頁 */
+    .case-split{display:grid;grid-template-columns:minmax(320px,.86fr) 1.14fr;gap:24px;align-items:stretch}
+    .case-photo{width:100%;height:100%;max-height:500px;object-fit:cover;object-position:48% 62%;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-sm)}
+    .case-panel{display:flex;flex-direction:column;gap:14px}
+    .case-lead{font-size:clamp(18px,1.55vw,23px);line-height:1.45;color:var(--soft);margin:0}
+    .score-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .score-card{background:var(--paper);border:1px solid var(--line);border-left:7px solid var(--sage);border-radius:8px;padding:14px 18px;box-shadow:var(--shadow-sm)}
+    .score-card.mid{border-left-color:var(--sky)}
+    .score-card.high{border-left-color:var(--terra)}
+    .score-card h3{font-size:clamp(21px,1.85vw,28px);line-height:1.18;margin:0 0 6px;color:var(--terra2)}
+    .score-card p{font-size:clamp(16px,1.35vw,20px);line-height:1.4;margin:0;color:var(--soft)}
+
+    /* 表格 */
+    table{border-collapse:collapse;width:100%;margin-top:14px;font-size:clamp(18px,1.7vw,25px);background:var(--paper);border-radius:8px;overflow:hidden;box-shadow:var(--shadow-sm)}
+    th,td{border:1px solid var(--line);padding:12px 16px;text-align:left}
+    th{background:var(--paper2);font-family:var(--font-hand);font-weight:700;color:var(--ink)}
+    td.k{font-family:var(--font-hand);font-weight:700;background:#faf2e2}
+
+    .blank{display:inline-block;min-width:2.6em;border-bottom:3px dashed var(--terra);margin:0 .15em}
+
+    /* bottom bar */
+    .bottombar{border:1px solid var(--line);border-radius:12px;background:rgba(255,253,248,.9);box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;padding:0 14px;gap:14px}
+    .controls{display:flex;gap:8px}
+    button{font:600 15px var(--font-mono);border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);padding:8px 12px;cursor:pointer}
+    button:hover{border-color:var(--terra);color:var(--terra2)}
+    .progress{height:8px;width:min(420px,30vw);border-radius:999px;background:var(--paper2);overflow:hidden}
+    .progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--terra),var(--mustard));transition:width .25s}
+    .counter{font:600 14px var(--font-mono);color:var(--soft)}
+    .hint{font:500 13px var(--font-mono);color:var(--soft);opacity:.8}
+
+    /* 講者備註 */
+    .notes{display:none;position:absolute;right:26px;bottom:26px;width:min(460px,42vw);max-height:calc(100% - 52px);overflow:auto;
+      background:linear-gradient(135deg,#fff7ea,#f5e3c8);border:1px solid rgba(217,115,78,.42);border-left:8px solid var(--terra);
+      border-radius:18px;box-shadow:var(--shadow);padding:22px;color:var(--ink);z-index:5;font-size:18px;line-height:1.55;font-weight:500}
+    .notes.show{display:block}
+    .notes .nt{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;color:var(--terra2);text-transform:uppercase;margin-bottom:6px}
+
+    @media(max-width:900px){
+      body{overflow:auto}.deck{height:auto;min-height:100%}.stage{min-height:680px}
+      .slide{padding:32px}.cards{flex-direction:column}.progress{display:none}
+      .activity-grid{grid-template-columns:1fr}
+      .case-split{grid-template-columns:1fr}.case-photo{max-height:320px}
+      .bd-steps{grid-template-columns:1fr}.bd-card:nth-child(n){margin-top:0;min-height:auto}.bd-ai{align-items:flex-start;flex-direction:column}
+      .bottombar{position:sticky;bottom:12px}
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="stage" id="stage">
+
+      <!-- 封面 -->
+      <section class="slide hero" data-note="先不講工具。今天要回答的是一個 mindset 問題：你打開 ChatGPT，是要它『替你做』，還是和它『一起做』。這兩種 mindset，會長成完全不同的老師。">
+        <div class="kicker">開場 · OPENING</div>
+        <h1>生成式 AI<br>協作備課與教學</h1>
+        <p class="tagline">從「把工作丟給它」，到「和它一起想」</p>
+        <div class="pillrow">
+          <span class="pill">如何問出好問題</span>
+          <span class="pill">AI × 備課與課程設計</span>
+          <span class="pill">設計學習任務</span>
+        </div>
+        <p class="speaker">林穎俊｜宜蘭縣中山國小</p>
+      </section>
+
+      <!-- S2 搜尋 vs 生成 -->
+      <section class="slide" data-note="開場活動。請學員真的拿手機或電腦做：一邊 Google 搜尋『林穎俊是誰』，一邊問 Gemini『林穎俊是誰？』。先讓大家直覺判斷哪一種比較好，再追問『為什麼』，把討論帶到搜尋引擎與生成式 AI 產生答案的方式不同。｜👥 學員：兩分鐘操作，一分鐘和旁邊的人說差異。">
+        <div class="slide-head"><div class="kicker">開場活動</div><h2>Google vs Gemini：同一個問題，差在哪？</h2></div>
+        <div class="activity-grid">
+          <div class="activity-box example">
+            <span class="time-chip">2 min</span>
+            <h3>Google</h3>
+            <p>搜尋：</p>
+            <p><strong>「林穎俊是誰」</strong></p>
+          </div>
+          <div class="activity-box task">
+            <span class="time-chip">2 min</span>
+            <h3>Gemini</h3>
+            <p>詢問：</p>
+            <p><strong>「林穎俊是誰？」</strong></p>
+          </div>
+        </div>
+        <p style="margin-top:22px;color:var(--soft)">你覺得哪一種比較好？<strong>為什麼？</strong></p>
+      </section>
+
+      <!-- S2 失敗 -->
+      <section class="slide statement" data-note="坦白自己也做過相反的事：曾把備課整包丟給 AI，拿到一份『看起來很完整』的教案，但那不是我的，我講不出來、也不知道為什麼這樣設計。問題不在 AI 生得不好，在我把『思考』省掉了。｜👥 學員：你有沒有過『AI 生得很漂亮，但我用不下去』的經驗？">
+        <div class="kicker">開場</div>
+        <div class="big">我第一次用 AI 寫教案，<br>它三秒鐘生出一份完整的教案。<br><br>我很開心。<br>然後我發現<span class="accent">都是AI做的，好像不需要我了</span></div>
+      </section>
+
+      <!-- S3 大腦外包 vs 思考夥伴 -->
+      <section class="slide" data-note="MIT 研究發現，學生用 AI 輔助寫作時大腦活躍度反而下降——思考被外包了。老師也一樣。今天整場，我想示範的是後者：讓 AI 進來，而我的思考不退場。">
+        <div class="slide-head"><div class="kicker">開場</div><h2>大腦外包 vs 思考夥伴</h2></div>
+        <div class="cards">
+          <div class="card"><h4>大腦外包</h4><p>AI 想，我複製貼上。<br>看起來省事，其實思考退場。</p></div>
+          <div class="card hi"><h4>思考夥伴</h4><p>我先想，AI 幫我想得更完整。<br>判斷留在我手上。</p></div>
+        </div>
+        <p style="text-align:center;margin-top:24px;color:var(--soft)">差別不在工具，在 <strong>誰在思考</strong>。</p>
+      </section>
+
+      <!-- S4 路線 -->
+      <section class="slide" data-note="你們已學過逆向設計、也做完一份單元教案，所以我不重講設計流程。我要做的是：把 AI 插進你已經會的那條流程裡。｜👥 學員：把自己那份單元教案先放在手邊，等下要用。">
+        <div class="slide-head"><div class="kicker">開場</div><h2>今天的目標</h2></div>
+        <div class="main-copy">
+          <ol>
+            <li>怎麼<strong>問</strong>，AI 才幫得上忙</li>
+            <li>AI 怎麼進你的<strong>備課與課程設計</strong></li>
+            <li>AI 怎麼幫你設計<strong>學習任務</strong>與引導學生產出</li>
+            <li>你怎麼<strong>帶學生</strong>在課堂上適當地用 AI</li>
+          </ol>
+         
+        </div>
+      </section>
+
+      <!-- S5 為什麼從提問 -->
+      <section class="slide statement center" data-note="很多人以為 AI 用不好是『沒用對工具』，其實更常是『沒問清楚』。提問品質，決定 AI 能不能變成夥伴。">
+        <div class="kicker">提問</div>
+        <div class="big">AI的回應好不好的關鍵是？<br><span class="accent">脈絡(Context)</span></div>
+      </section>
+
+      <!-- S6 問出好問題 vs 把問題問好 -->
+      <section class="slide statement" data-note="打破『背一個神級 prompt 就好』的期待。2024 我教 TRIPO、26 原則那種範本，現在更想讓你掌握三個動作就好——適用於任何工具、任何版本。">
+        <div class="kicker">提問</div>
+        <div class="big">「問出好問題」是一次解決的幻想。<br>「把問題問好」是來回不斷迭代的過程。</div>
+        <p class="sub">想像你跟朋友合作作品，都說「沒問題」的人，是雷包還是神隊友？<br><strong>沒有完美的 prompt，只有更靠近的對話。</strong></p>
+      </section>
+
+      <!-- S7 三個動作 -->
+      <section class="slide" data-note="逐一示範。給脈絡：『幫我寫信』→『我是五年級導師，要寫給生氣的家長，語氣誠懇但守住專業界線』。引導思考：加一句『請先列出三種寫法草稿，再說各自優缺點，最後問我要選哪個』。迭代：第一版不是終點，把 AI 當草稿機，不是答案機（可示範一個情緒勒索版）。｜👥 學員：記下『引導思考』那句句型，等下實作要用。">
+        <div class="slide-head"><div class="kicker">提問</div><h2>把問題問好的三個動作</h2></div>
+        <div class="cards">
+          <div class="card"><div class="num">1</div><h4>提供脈絡(Context)</h4><p>對象、目的、情境、風格、範例。</p></div>
+          <div class="card"><div class="num">2</div><h4>引導思考</h4><p>請它先說步驟、先比較、先質疑。</p></div>
+          <div class="card"><div class="num">3</div><h4>迭代</h4><p>先看一版，再告訴它哪裡要改。</p></div>
+        </div>
+        
+      </section>
+
+      <!-- S7a 活動一 -->
+      <section class="slide" data-note="活動一讓學員感覺『脈絡』不是裝飾，而是品質差距的來源。先請大家丟一句很短的需求，再把完整脈絡補上去比較。重點是讓他們看見：對象、目的、限制、語氣會直接改變 AI 的回應。這一頁不要給範本，讓他們先自己試。">
+        <div class="slide-head"><div class="kicker">活動一 · 提供脈絡</div><h2>同一個任務，先給一點點、再補足</h2></div>
+        <div class="activity-grid">
+          <div class="activity-box example">
+            <span class="time-chip">3 min</span>
+            <h3>範例情境</h3>
+            <p>你是五年級導師，要回覆一位很生氣的家長。孩子今天和同學衝突，家長覺得老師沒有處理。</p>
+            <p><strong>一點點的版本：</strong><br>「幫我寫一封給家長的信。」</p>
+          </div>
+          <div class="activity-box task">
+            <span class="time-chip">5 min</span>
+            <h3>現場任務</h3>
+            <ol>
+              <li>只問一句話</li>
+              <li>補上所需的脈絡。</li>
+              <li>比較兩版差異。</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- S7a 範本 -->
+      <section class="slide" data-note="等學員試完後再揭露。提醒：這不是標準答案，而是一個可比較的示範問法。可以請大家回頭看自己剛剛少了哪個脈絡。">
+        <div class="slide-head"><div class="kicker">活動一 · 範本</div><h2>我的示範問法</h2></div>
+        <div class="sample-prompt">
+          <div class="lbl">貼給 AI</div>
+          我是五年級導師，要回覆一位因孩子衝突而生氣的家長。孩子今天和同學發生衝突，家長覺得老師沒有處理。請用誠懇、專業、不推責的語氣，寫一封 250 字內的訊息，並守住老師能承諾與不能承諾的界線。
+        </div>
+        <p class="sample-note">範本不是答案，是拿來比較「我剛剛少給了什麼」的參考起點。</p>
+      </section>
+
+      <!-- S7b 活動二 -->
+      <section class="slide" data-note="活動二沿用同一個家長回覆情境，但這次不要直接要成品。請學員讓 AI 先提出不同回覆策略，比較優缺點，再問一個問題。重點是把 AI 從代寫者變成思考夥伴。">
+        <div class="slide-head"><div class="kicker">活動二 · 引導思考</div><h2>不要直接給答案，先讓 AI 比較</h2></div>
+        <div class="activity-grid">
+          <div class="activity-box example">
+            <span class="time-chip">4 min</span>
+            <h3>範例情境</h3>
+            <p>同一位生氣的家長。你現在不急著請 AI 寫信，而是先想：這封訊息可以有哪些不同處理策略？</p>
+          </div>
+          <div class="activity-box task">
+            <span class="time-chip">6 min</span>
+            <h3>現場任務</h3>
+            <ol>
+              <li>先要三種回覆策略。</li>
+              <li>比較優點、風險、語氣。</li>
+              <li>最後只問一個問題。</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- S7b 範本 -->
+      <section class="slide" data-note="揭露活動二範本。這頁重點是示範『先比較，不先產出』。可以請學員觀察：AI 如果先比較策略，老師比較容易保留判斷權。">
+        <div class="slide-head"><div class="kicker">活動二 · 範本</div><h2>讓 AI 先幫我想清楚</h2></div>
+        <div class="sample-prompt">
+          <div class="lbl">貼給 AI</div>
+          我是五年級導師，要回覆一位因孩子衝突而生氣的家長。請先不要寫完整訊息。請提出三種不同回覆策略，分別說明優點、可能風險、適合的語氣，最後反問我一個最需要先釐清的問題。
+        </div>
+        <p class="sample-note">這一步不是叫 AI 代寫，而是先讓它把選項攤開，讓老師做判斷。</p>
+      </section>
+
+      <!-- S7c 活動三 -->
+      <section class="slide" data-note="活動三仍然沿用同一個家長情境。請學員假設 AI 已經寫出第一版，但第一版通常會太通用或太圓滑。這次練習用具體條件要求它修改，並請它說明取捨。">
+        <div class="slide-head"><div class="kicker">活動三 · 迭代</div><h2>第一版不是答案，是草稿</h2></div>
+        <div class="activity-grid">
+          <div class="activity-box example">
+            <span class="time-chip">4 min</span>
+            <h3>範例情境</h3>
+            <p>AI 已經寫出一版家長訊息，但它太客套、太像公版，也沒有讓家長感覺老師會持續處理。</p>
+          </div>
+          <div class="activity-box task">
+            <span class="time-chip">6 min</span>
+            <h3>現場任務</h3>
+            <ol>
+              <li>挑出最不適合的一點。</li>
+              <li>加上具體條件重改。</li>
+              <li>說明改動與取捨。</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- S7c 範本 -->
+      <section class="slide" data-note="揭露活動三範本。強調：迭代不是說『再好一點』，而是指出具體問題、加上限制，並要求 AI 說明取捨。">
+        <div class="slide-head"><div class="kicker">活動三 · 範本</div><h2>把第一版修到能真的使用</h2></div>
+        <div class="sample-prompt">
+          <div class="lbl">貼給 AI</div>
+          這一版太像公版，也太快安撫家長了。請改成更像老師真實會傳出的訊息：先承接家長情緒，再說明我已經做了什麼，接著提出後續處理方式。語氣要誠懇但不過度承諾，字數控制在 220 字內。改完後，請說明你改了哪三點，以及這樣會犧牲什麼。
+        </div>
+        <p class="sample-note">迭代的重點：不要只說「改好一點」，要說清楚哪裡不好、要往哪裡改。</p>
+      </section>
+
+      <!-- S8 先讓 AI 問你 -->
+      <section class="slide dark statement" data-note="讓 AI 當那個一直追問你的人，它會逼你把模糊的目標講清楚。這比任何範本都有用。跟逆向設計一樣，都是以終為始。｜👥 學員：抄下『動手前先一次問我一個問題，直到清楚為止』。">
+        <div class="kicker">反轉</div>
+        <div class="big">最有用的一句話，<br>常常不是你問 AI，<br>而是<span class="accent">叫 AI 先問你。</span></div>
+        <p class="sub">「請先一次問我一個問題，直到你得到足夠的資訊，才開始行動。」</p>
+      </section>
+
+      <!-- S9 段落小結 -->
+      <section class="slide statement center" data-note="帶著這套動作，我們進到今天的主場：備課。">
+        <div class="kicker">小結</div>
+        <div class="big">把問題問好 ＝<br>提供脈絡 ＋ 引導思考 ＋ 迭代</div>
+        <p class="sub">更好的提問，是讓 <strong>AI 先跟你釐清</strong>。</p>
+      </section>
+
+      <!-- S10 逆向設計 -->
+      <section class="slide" data-note="Backward Design：AI 該在什麼階段放進來？以及怎麼用。">
+        <div class="slide-head"><div class="kicker">備課</div><h2>Backward Design</h2></div>
+        <div class="bd-layout">
+          <p class="bd-question">不是先想活動，而是先問：<strong>OOOO</strong></p>
+          <div class="bd-steps">
+            <div class="bd-card">
+              <div class="bd-num">Step 01</div>
+              <h3 class="bd-title">重新思考<br>學習目標</h3>
+              <p class="bd-desc">學完這個單元，學生能說明、做出、判斷或改進什麼？</p>
+            </div>
+            <div class="bd-card">
+              <div class="bd-num">Step 02</div>
+              <h3 class="bd-title">設計<br>評量證據</h3>
+              <p class="bd-desc">我要看到哪些表現，才知道學生真的理解，而不是只完成活動？</p>
+            </div>
+            <div class="bd-card">
+              <div class="bd-num">Step 03</div>
+              <h3 class="bd-title">重新設計<br>教學活動</h3>
+              <p class="bd-desc">最後才安排任務、材料與 AI 工具，讓教學活動對齊目標。</p>
+            </div>
+          </div>
+          <div class="bd-ai">
+            <span class="tag">AI 的角色</span>
+            <p>不是直接幫我生教案，而是在每一步幫我<strong>追問、挑戰、找出我沒想到的連結</strong>。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- S11 關鍵區分 -->
+      <section class="slide statement center" data-note="直接生教案＝大腦外包，前面講過的失敗。批判夥伴＝你先想出版本，再請 AI 從別的角度挑戰、補漏、提醒你沒看到的學生。AI 不取代判斷，它擴張視野。">
+        <div class="kicker">關鍵</div>
+        <div class="big">❌ 讓 AI 直接生一份教案<br><br>✅ 讓 AI 在每一步<br><span class="accent">當你的思考夥伴</span></div>
+      </section>
+
+      <!-- S12 第一步 -->
+      <section class="slide" data-note="你先寫，AI 後補充。最常見毛病是目標寫成『了解、認識、欣賞』——不可評量。AI 很擅長抓這種模糊。這一步就用上了『先讓 AI 問你』。">
+        <div class="slide-head"><div class="kicker">第一步</div><h2>把目標問清楚</h2></div>
+        <p>你<strong>先寫</strong>：學完這個單元，學生「能做到什麼」。</p>
+        <div class="prompt"><div class="lbl">再請 AI</div>「這是我的單元目標。請你當一個挑剔的資深老師，指出哪些目標太模糊、無法評量，並<strong>一次問我一個問題</strong>逼我講清楚。」</div>
+      </section>
+
+      <!-- S13 第二步 -->
+      <section class="slide" data-note="逆向設計的靈魂，也是師資生最容易跳過的一步。AI 適合在這裡『擴張選項』——一次給你口頭說明、實作、專題、離場券…多種形式，你再依學生選。發想交給 AI，判斷留給你。">
+        <div class="slide-head"><div class="kicker"> 第二步</div><h2>用評量證據反推</h2></div>
+        <div class="prompt">「根據這個目標，學生要做到什麼程度，我才能說他<strong>真的會了</strong>？」</div>
+        <p style="margin-top:18px">請 AI 幫你<strong>發想多種</strong>評量證據，再由<em>你來選</em>。</p>
+      </section>
+
+      <!-- S14 第三步 -->
+      <section class="slide" data-note="示範一個真實 rubric。AI 生的 rubric 第一版幾乎都『正確但無感』，因為它不認識你的學生。你的工作是把它改到『我班上那幾個孩子對得上號』。">
+        <div class="slide-head"><div class="kicker">第三步</div><h2>把評量轉成評量規準</h2></div>
+        <div class="prompt">「幫我把這個表現任務，寫成評量規準（rubric），分『概念理解／合作／表達』三個向度。」</div>
+        <p style="margin-top:18px">然後才<strong>由你修</strong>。AI 的規準常常太通用——<em>AI 不會比你更懂你的學生。</em></p>
+      </section>
+
+      <!-- S15 第四步 -->
+      <section class="slide" data-note="關鍵句是『會犧牲什麼』。逼 AI 講 trade-off，你才不會被漂亮的活動沖昏頭。活動是最後才生的，不是最先——正好對抗師資生『一想到主題就先排活動』的直覺。">
+        <div class="slide-head"><div class="kicker">第四步</div><h2>最後，才開始設計活動</h2></div>
+        <p>目標、證據、評量規準都有了，最後才讓 AI 幫你長出學習活動。</p>
+        <div class="prompt">「請從不同角度提三種活動設計，並說明<strong>每個設計的重點以及權衡是什麼</strong>。」</div>
+      </section>
+
+      <!-- S16 一波三折 -->
+      <section class="slide" data-note="我在現場真的跑過的單元。重點不是『AI 幫孩子寫故事』，而是先確定要評什麼（寫作、合作、提問），才設計『先想再協作』的活動——AI 是協作對象，不是代筆。改變：作文成績→三種能力；獨自完成→兩人協作；交差→願意一改再改。｜👥 學員：這單元裡，AI 取代了什麼？又逼孩子多做了什麼？">
+        <div class="slide-head"><div class="kicker">真實案例</div><h2>一波三折的故事</h2></div>
+        <div class="cards">
+          <div class="card"><h4>目標</h4><p>從原本的自己寫到孩子能和<strong>AI 協作</strong> </p></div>
+          <div class="card"><h4>評量</h4><p>從原本的寫作成績到<strong>寫作 × 合作 × 提問。</strong></p></div>
+          <div class="card"><h4>活動</h4><p>從原本的獨立完成到<strong>兩人一組 → 先完成學習單 → 與 AI 協作 → 分享。</strong></p></div>
+        </div>
+        <p style="margin-top:20px;color:var(--soft);font-size:.9em">三個改變：作文成績→<em>三種能力</em>；獨自完成→<em>兩人協作</em>；交差→<em>願意一改再改</em>。</p>
+      </section>
+
+      <!-- S17 小結 -->
+      <section class="slide statement center" data-note="你還是那個設計者，AI 只是讓你看得更多、想得更全。">
+        <div class="kicker">小結</div>
+        <div class="big">AI 不是教案生成器，<br>是逆向設計每一步的<br><span class="accent">批判性思考夥伴。</span></div>
+        <p class="sub">發想交給 AI，<strong>決定跟檢查留給你</strong>。</p>
+        <p class="sub">OECD的研究也指出AI可以提升新進教師效率跟教學品質。</p>
+      </section>
+
+      <!-- S18 過渡 -->
+      <section class="slide statement" data-note="過渡。前一段是老師端，這一段移到『學生產出』——學生要產出什麼、用哪些 AI 工具、配哪種學習方式。主辦方第二個重點。">
+        <div class="kicker">學習任務</div>
+        <div class="big">備課想的是：<span class="accent">我要教什麼。</span><br>學習任務想的是：<br><span class="accent">學生的手和腦，要怎麼動。</span></div>
+      </section>
+
+      <!-- S19 不只一種工具 -->
+      <section class="slide" data-note="『用 AI』不等於『全班開 ChatGPT 打字』。工具要對應學習任務的性質。下面用案例示範同一堂課裡怎麼讓工具服務學習，而不是工具主導。｜👥 學員：你的教案裡，哪個環節最適合『資料整理』，哪個最適合『生成圖像』？">
+        <div class="slide-head"><div class="kicker">學習任務</div><h2>不只一種 AI 工具</h2></div>
+        <table>
+          <tr><th>任務性質</th><th>適合的工具</th></tr>
+          <tr><td class="k">發想、改寫、生成範例</td><td>文本生成</td></tr>
+          <tr><td class="k">摘要、萃取重點、比對資訊</td><td>資料整理</td></tr>
+          <tr><td class="k">把抽象變具體、製造討論張力</td><td>生成圖像</td></tr>
+          <tr><td class="k">朗讀、講解、轉錄</td><td>語音／影音</td></tr>
+        </table>
+      </section>
+
+      <!-- S20 改照片活動 -->
+      <section class="slide" data-note="刻意選『老師的照片』當素材：有真實人物、有肖像，但對象是我、現場可以同意，風險可控。學生玩得很開心，幾乎沒人覺得有問題——這正是討論的起點，不是要糾正的錯誤。｜👥 學員：這任務真正在練的，是修圖技巧，還是判斷力？">
+        <div class="slide-head"><div class="kicker">案例一</div><h2>讓學生把「我的」照片變有趣</h2></div>
+        <p>學習任務：給學生我的一張照片，請他們用 AI 把它改得<strong>更有趣</strong>。</p>
+        <p>一邊改、一邊問：這樣改 OK 嗎？什麼情況下就<strong>不 OK</strong> 了？</p>
+        <p class="sub" style="margin-top:.5em">生成圖片的界線與規範，不從說教開始——從他們<strong>親手改我的臉</strong>開始。</p>
+      </section>
+
+      <!-- S20b 學生作品 -->
+      <section class="slide" data-note="現場展示時先笑成一團——這很好。笑完後再把問題丟出去：這些圖可以貼在班級臉書嗎？可以拿去做梗圖嗎？讓他們自己感覺到那條線在哪。">
+        <div class="slide-head"><div class="kicker">案例一</div><h2>學生把我的照片，改成這樣</h2></div>
+        <div style="display:flex;gap:24px;justify-content:center;align-items:flex-end;margin-top:4px">
+          <figure style="margin:0;text-align:center">
+            <img src="assets/ai-photo/example.png" alt="原照片" style="height:min(44vh,360px);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow-sm)">
+            <figcaption style="margin-top:10px;color:var(--soft);font-size:19px">原照片</figcaption>
+          </figure>
+          <figure style="margin:0;text-align:center">
+            <img src="assets/ai-photo/example2.png" alt="學生作品：美少女戰士" style="height:min(44vh,360px);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow-sm)">
+            <figcaption style="margin-top:10px;color:var(--soft);font-size:19px">學生作品：美少女戰士</figcaption>
+          </figure>
+          <figure style="margin:0;text-align:center">
+            <img src="assets/ai-photo/example3.png" alt="學生作品：海綿寶寶風" style="height:min(44vh,360px);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow-sm)">
+            <figcaption style="margin-top:10px;color:var(--soft);font-size:19px">學生作品：海綿寶寶風</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- S21 反轉 -->
+      <section class="slide dark statement center" data-note="這就是『己所不欲』。孩子對『改別人』和『改自己』的直覺完全不同——那個不同，就是肖像權、同意、隱私的起點，比我講十條規則都有用。守則就從這個瞬間長出來：別人的臉，跟你的臉一樣，都需要先問過。｜👥 學員：你的課堂活動，能不能也設計一個讓界線『自己浮現』的瞬間？">
+        <div class="kicker">案例一・反轉</div>
+        <div class="big">改完我的照片，我問：<br>「要不要把自己的照片，<br>也套上同樣的 prompt？」<br><br><span class="accent">沒有人要。</span></div>
+        <p class="sub">界線不是我規定的——是他們自己的反應，演出來的。</p>
+      </section>
+
+      <!-- S22 AI 作文教學 -->
+      <section class="slide" data-note="案例二改成 AI 作文教學。重點不是讓學生直接生成作文，而是從構思、卡關、追問、修改開始。學生學的是如何適切委託任務，而不是全盤依賴。後來 AI 作文比賽報名多到要用三間教室，但評分重點不是文章多漂亮，而是學生如何跟 AI 對話：低分是照單全收，中分能引導重寫，高分會帶著自己的核心想法挑 AI 的毛病。也可以補一句：語文課完成故事後，資訊課再用故事生成圖像，自然接到視覺呈現。">
+        <div class="slide-head"><div class="kicker">案例二</div><h2>AI 作文教學：評的不是文章，是對話</h2></div>
+        <div class="case-split">
+          <img class="case-photo" src="assets/ai-writing/ai-writing-class.jpg" alt="學生在教室中使用 AI 協作寫作">
+          <div class="case-panel">
+            <p class="case-lead">語文課不是讓學生直接生成作品，而是從<strong>構思、釐清想法、突破卡關</strong>開始。學生問 AI 詞彙、情緒、轉折，協作完成故事，再延伸到資訊課的 AI 圖像生成。</p>
+            <div class="score-grid">
+              <div class="score-card">
+                <h3>低分區：照單全收</h3>
+                <p>完全接受 AI 建議，文章充滿 AI 味。</p>
+              </div>
+              <div class="score-card mid">
+                <h3>中間區：能引導重寫</h3>
+                <p>知道自己想要什麼，不滿意會要求 AI 往指定方向改。</p>
+              </div>
+              <div class="score-card high">
+                <h3>高分區：會挑 AI 的毛病</h3>
+                <p>先有核心想法，能指出「這個轉折不符合主角個性」。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S22c 案例三 setup -->
+      <section class="slide" data-note="Vibe Coding：用自然語言跟 AI 一起把想法變成能跑的 App，不必先會寫程式。任務開得很開放——做一個對『你自己的學習』有幫助的 App。開放，是為了讓每個孩子都能從自己的需要出發。">
+        <div class="slide-head"><div class="kicker">案例三</div><h2>用 Vibe Coding 做一個幫自己學習的 App</h2></div>
+        <p>Vibe Coding：用<strong>自然語言</strong>跟 AI 一起，把想法變成能跑的 App——不必先會寫程式。</p>
+        <p>任務只有一句：做一個<strong>對你自己的學習有幫助</strong>的 App。</p>
+        <p class="sub" style="margin-top:.5em">開放，是為了讓每個孩子都能從<strong>自己的需要</strong>出發。</p>
+      </section>
+
+      <!-- S22d 安靜的孩子 -->
+      <section class="slide statement" data-note="不要急著把這段講成勵志故事。先讓畫面停在那個『安靜』——當全班都興奮地產出，有一個孩子不知道要做什麼。那不是他不努力，是過去的學習很少從『他的需要』開始。他是班上學得比較慢的孩子。">
+        <div class="kicker">案例三</div>
+        <div class="big">當其他孩子興奮地<br>做出五花八門的作品，<br><br>他安靜地坐著，看著螢幕，<br><span class="accent">不太知道要做什麼。</span></div>
+      </section>
+
+      <!-- S22e 便利貼 -->
+      <section class="slide" data-note="這是他寫在便利貼上的字，歪歪斜斜。我一字不改地留著——因為這句話，比任何學習理論都更清楚地說出『學習』對他是什麼。念出來時，放慢。">
+        <div class="slide-head"><div class="kicker">案例三 · 他的便利貼</div><h2>一張便利貼</h2></div>
+        <div style="display:flex;gap:40px;align-items:center;margin-top:2px">
+          <img src="assets/vibecoding/note.png" alt="孩子的便利貼" style="height:min(48vh,400px);border-radius:14px;border:1px solid var(--line);box-shadow:var(--shadow-sm)">
+          <div class="big" style="font-size:clamp(26px,3vw,42px)">「因為都不會，<br>所以一直教不出功課，<br>希望有一台學習機器<br>能讓我<span class="accent">聽得懂</span>。」</div>
+        </div>
+      </section>
+
+      <!-- S22f AI 助教 -->
+      <section class="slide" data-note="畫面很樸素，就是一個對話框。但它的『態度』被他寫進系統提示裡——這張截圖就是他做的 AI 助教怎麼說話：不直接給答案、多用生活譬喻、把難字換簡單、進步就馬上具體讚美。一個常被說『教不會』的孩子，做出了一個『一定教得會』的老師。">
+        <div class="slide-head"><div class="kicker">案例三 · 他做出的</div><h2>一個「聽得懂他」的 AI 助教</h2></div>
+        <div style="display:flex;gap:32px;align-items:center;margin-top:0">
+          <div style="flex:1">
+            <p style="font-size:.9em">畫面很樸素，就是一個對話介面。但你問任何數學、英文、寫作或自然，它都用「<strong>三年級也聽得懂</strong>」的方式回答：</p>
+            <ul style="margin-top:.3em">
+              <li>不直接給答案，<strong>引導他自己想</strong></li>
+              <li>多用幾個<strong>生活上的譬喻</strong></li>
+              <li>把難的字，<strong>換成簡單的字</strong></li>
+              <li>有進步，就<strong>馬上具體讚美</strong></li>
+            </ul>
+          </div>
+          <img src="assets/vibecoding/assistant-code.png" alt="AI 助教的系統提示" style="height:min(46vh,380px);border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow-sm)">
+        </div>
+      </section>
+
+      <!-- S22g 收束 -->
+      <section class="slide dark statement center" data-note="這是我最想留給師資生的一張。我們常擔心 AI 讓孩子不思考；但對這個孩子，AI 是第一個願意慢慢說、等他聽懂的『老師』。最需要這種陪伴的，往往不是跑最快的孩子。那台『聽得懂的學習機器』，他沒有等別人給——他自己做出來了。">
+        <div class="kicker"></div>
+        <div class="big">那台「聽得懂的學習機器」，<br>他沒有等別人給——<br><span class="accent">他自己做出來了。</span></div>
+        <p class="sub">最需要被聽懂的孩子，第一次當了<strong>創造者</strong>。</p>
+      </section>
+
+      <!-- S23 好任務判準 -->
+      <section class="slide" data-note="把三個案例收成三條判準。等下實作要拿這三條來檢查自己的教案。">
+        <div class="slide-head"><div class="kicker">小結</div><h2>好的 AI 學習任務</h2></div>
+        <div class="main-copy">
+          <ol>
+            <li>學生的產出是<strong>思考的材料</strong>，不是「最終答案」</li>
+            <li>工具<strong>服務</strong>任務——不要為了 AI 而 AI</li>
+            <li>要學生學會<strong>人機協作</strong>，而不是複製貼上</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- S24 以人為主 -->
+      <section class="slide dark statement center" data-note="答案：留給『思考』。這裡刻意留白，先讓學員答。給師資生一個可帶走的底線就好——學生能用 AI 省時間，但『學習這件事』本身不能外包。前面改照片的案例已示範了『怎麼引導』——倫理是設計出來的，不是規訓的。">
+        <div class="kicker">引導學生</div>
+        <div class="big">學習不能被替代。<br>AI 省下的時間，<br>要留給 <span class="blank"></span>。</div>
+      </section>
+
+      <!-- S25 注意事項 -->
+      <section class="slide" data-note="不展開講，快速帶過。提醒：這四條對老師自己也成立——你怎麼用，學生就怎麼學你用。">
+        <div class="slide-head"><div class="kicker">引導學生</div><h2>帶學生時使用AI注意的事情</h2></div>
+        <div class="main-copy">
+          <ol>
+            <li><strong>辨別與負責</strong>：不照單全收，為自己的決定負責</li>
+            <li><strong>當夥伴不當答案</strong>：用它換角度，不用它換答案</li>
+            <li><strong>練習提問</strong>：把大問題切小，一步步問</li>
+            <li><strong>保護隱私</strong>：不在對話裡丟個人資訊</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- S26 更難的問題 -->
+      <section class="slide dark statement center" data-note="不給答案。這呼應前面改照片的反轉（沒人要改自己的臉），也是我常留給孩子的問題，今天也留給你們。停頓，讓它懸著。｜👥 學員：記在心裡，Q&A 可以聊。">
+        <div class="kicker"> 留白</div>
+        <div class="big">有什麼東西，<br>是你覺得<br><span class="accent">「永遠不該讓 AI 來做」的？</span></div>
+      </section>
+
+      <!-- S28 換你動手 -->
+      <section class="slide statement" data-note="精神是——不推翻你的設計，把 AI 當批判夥伴，挑一個你最不滿意、或最沒把握的環節，跑一輪。｜👥 學員：打開單元教案，選定『一個』最想優化的環節（一個目標、一個評量、或一個活動）。">
+        <div class="kicker">動手做 · 實作</div>
+        <div class="big">拿出你這學期做的<br>那份單元教案。<br><span class="accent">我們不重做，只優化一段。</span></div>
+      </section>
+
+      <!-- S29 實作步驟 -->
+      <section class="slide" data-note="全程巡場。不要接受第一版——第一版是用來『看見自己沒想到的角度』，不是用來複製。把『先讓 AI 問你』真的用出來。｜👥 學員：按四步走完一輪，卡住就舉手。">
+        <div class="slide-head"><div class="kicker">動手做 · 步驟</div><h2>實作四步</h2></div>
+        <div class="main-copy">
+          <ol>
+            <li>把那一段<strong>貼給 AI</strong></li>
+            <li>先讓它問你：「動手前，請一次問我一個問題，直到清楚我的學生和目標。」</li>
+            <li>請它當<strong>批判夥伴</strong>：挑問題、提三種改法、各說會犧牲什麼</li>
+            <li><strong>你來判斷</strong>、挑選、再改</li>
+          </ol>
+          <p style="color:var(--terra2);margin-top:.3em">不要接受第一版。它是用來「看見你沒想到的角度」。</p>
+        </div>
+      </section>
+
+      <!-- S30 自我檢查 -->
+      <section class="slide" data-note="三條判準拿回來用。這是讓他們帶得走的檢查清單。｜👥 學員：用三條判準檢查剛改的版本，圈出還想再調的地方。">
+        <div class="slide-head"><div class="kicker">動手做 · 檢查</div><h2>用三條判準自我檢查</h2></div>
+        <div class="main-copy">
+          <ul>
+            <li>學生的產出，是<strong>思考的材料</strong>還是「最終答案」？</li>
+            <li>AI 的使用是在<strong>放大學習</strong>，還是為了 AI 而 AI？</li>
+            <li>這教學設計是<strong>人機協作</strong>，還是複製貼上？</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- S31 鏡子 -->
+      <section class="slide dark statement center" data-note="把鏡子轉回自己。整場示範的所有做法，底層只有一個信念——AI 進來，但思考不退場。我們要當的不是會用 AI 的老師，是還在思考的老師。">
+        <div class="kicker">反思</div>
+        <div class="big">我們擔心學生<br>把思考外包給 AI。<br><br>但如果，連老師<br><span class="accent">備課都外包了呢？</span></div>
+      </section>
+
+      <!-- S32 人選智慧 -->
+      <section class="slide" data-note="未來最稀缺的不是『會生成』，是『會選擇』。發想可交給 AI，但選哪一個、為什麼選、改成什麼樣子，這是老師的專業，也是要替孩子養的能力。">
+        <div class="slide-head"><div class="kicker"> 反思</div><h2>從人工智慧，到「人選智慧」</h2></div>
+        <div class="big" style="font-size:clamp(30px,3.6vw,50px)">AI 給你很多選項。<br>真正的能力，是 <span class="accent">「選」</span>——</div>
+        <p class="sub">你的<strong>判斷</strong>、你的<strong>品味</strong>、你的<strong>後設認知</strong>。</p>
+      </section>
+
+      <!-- S34 結語 -->
+      <section class="slide statement center" data-note="回扣開場。今天教的所有 prompt、案例、流程，都只是手段。手段會過時，但『想清楚再動手、和學生一起思考』不會。">
+        <div class="kicker">結語</div>
+        <div class="big">有效教學，才是核心。<br>讓孩子<span class="accent">愛上學習</span>，<br>是我們一生的課題。</div>
+        <p class="sub">AI 只是讓我們，<strong>更有力氣</strong>去做這件事。</p>
+      </section>
+
+      <!-- S35 謝謝 -->
+      <section class="slide hero" data-note="開放 Q&A。可主動拋——剛剛實作時，AI 問你的哪個問題最讓你卡住？">
+        <div class="kicker">Q&amp;A · 謝謝</div>
+        <h1>老師的價值是什麼？</h1>
+        <p class="speaker">林穎俊　·　Email：highlander@tmail.ilc.edu.tw　</p>
+      </section>
+
+    </section>
+
+    <nav class="bottombar">
+      <div class="controls">
+        <button id="prev">← 上一頁</button>
+        <button id="next">下一頁 →</button>
+        <button id="noteBtn">講者備註 (N)</button>
+      </div>
+      <div class="progress"><span id="bar"></span></div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="hint">← → 翻頁 · N 備註 · F 全螢幕</span>
+        <span class="counter" id="counter">1 / 1</span>
+      </div>
+    </nav>
+  </main>
+
+  <div class="notes" id="notes"><div class="nt">講者備註</div><div id="noteText"></div></div>
+
+  <script>
+    const slides=[...document.querySelectorAll('.slide')];
+    let i=0;
+    const bar=document.getElementById('bar'),counter=document.getElementById('counter');
+    const notes=document.getElementById('notes'),noteText=document.getElementById('noteText');
+    function show(n){
+      i=Math.max(0,Math.min(slides.length-1,n));
+      slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+      bar.style.width=((i+1)/slides.length*100)+'%';
+      counter.textContent=(i+1)+' / '+slides.length;
+      noteText.textContent=slides[i].dataset.note||'（無備註）';
+    }
+    document.getElementById('next').onclick=()=>show(i+1);
+    document.getElementById('prev').onclick=()=>show(i-1);
+    document.getElementById('noteBtn').onclick=()=>notes.classList.toggle('show');
+    document.addEventListener('keydown',e=>{
+      if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();show(i+1);}
+      else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1);}
+      else if(e.key==='Home'){show(0);}
+      else if(e.key==='End'){show(slides.length-1);}
+      else if(e.key.toLowerCase()==='n'){notes.classList.toggle('show');}
+      else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+    });
+    show(0);
+  </script>
+</body>
+</html>
